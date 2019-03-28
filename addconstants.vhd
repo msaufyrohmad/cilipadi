@@ -3,21 +3,26 @@
 --  s->b[0] ^=               (((RCONST[r] >> 3) & 0x7) << 24) ^ (0x1 << 12) ^ (((RCONST[r] >> 0) & 0x7) << 8);
 --  s->b[1] ^= (0x2 << 28) ^ (((RCONST[r] >> 3) & 0x7) << 24) ^ (0x3 << 12) ^ (((RCONST[r] >> 0) & 0x7) << 8);
 --}
+-- msr, cilipadi
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;  
 
 entity addconstants is
-port(   x:	in std_logic_vector(63 downto 0);
-        r   : in integer range 0 to 48;
-	    y:	out std_logic_vector(63 downto 0)
+port(   
+        clk     : in std_logic;
+        reset   : in std_logic;
+        x       :	in std_logic_vector(63 downto 0);
+     --   r   : in integer range 0 to 48;
+	    y      :	out std_logic_vector(63 downto 0)
 	);
 end addconstants;
 
 
 architecture behavioral of addconstants is
 
+signal r                : integer range 0 to 48:=10;
 signal r0,r1            : STD_LOGIC_VECTOR (31 downto 0);
 
 signal r0_in            : std_logic_vector(31 downto 0);
@@ -73,14 +78,19 @@ end process;
 
 r1_calc: process
 begin
-     r1_consts_left <= pad24 & std_logic_vector(shift_left(shift_right(led_rconsts(r),3) and x"07",24));
+   r1_consts_left <= pad24 & std_logic_vector(shift_left(shift_right(led_rconsts(r),3) and x"07",24));
    r1_consts_inter <= pad28 & shift_left(x"3",12);
    r1_consts_right <= unsigned(pad24) & shift_right((led_rconsts(r) and x"07"),8);
    r1_in <= x(63 downto 32);   
    r1 <= r1_in xor r1_consts_left xor std_logic_vector(r1_consts_inter xor r1_consts_right);
 end process;
-output: process(r0,r1)
+
+output: process(clk,reset,r0,r1)
 begin
-    y <= r0 & r1;
+    if reset = '1' then
+        y <= (others => '0');
+    elsif clk'event and clk = '1' then
+        y <= r0 & r1;
+    end if;
 end process;
 end behavioral;
